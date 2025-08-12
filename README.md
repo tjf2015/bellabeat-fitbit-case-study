@@ -4,7 +4,7 @@ Brand accents: Purple #6E44FF  |  Orange #FF7A00
 -->
 
 <p align="center">
-  <img src="images/03_steps_sleep_heatmap.png" alt="Steps × Sleep Heatmap" width="860">
+  <img src="images/03_steps_sleep_heatmap.png" alt="Steps × Sleep Heatmap" width="860" style="background-color: white;">
 </p>
 
 <h1 align="center">Bellabeat Case Study — Fitbit Data Analysis</h1>
@@ -55,7 +55,7 @@ Analysis of public **Fitbit tracker data** to uncover trends in **steps, sleep, 
 ## 📈 Visualization Preview
 > Steps × Sleep (color = mean calories)
 <p>
-  <img src="images/03_steps_sleep_heatmap.png" alt="Steps vs Sleep (Mean Calories)" width="760">
+  <img src="images/03_steps_sleep_heatmap.png" alt="Steps vs Sleep (Mean Calories)" width="760" style="background-color: white;>
 </p>
 <sub>Peak calorie burn appears with ~6–9 hours of sleep and 8k–12k steps.</sub>
 
