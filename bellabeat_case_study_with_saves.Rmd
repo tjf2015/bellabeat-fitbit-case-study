@@ -1,0 +1,166 @@
+---
+title: "Bellabeat Case Study - Fitbit Data Analysis"
+author: "Tim Foltz"
+date: "2025-08-11"
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    number_sections: false
+    latex_engine: xelatex
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    number_sections: false
+geometry: margin=1in
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+knitr::opts_chunk$set(fig.width = 8, fig.height = 6, dpi = 300)
+
+library("ggplot2")
+theme_set(theme_minimal(base_size = 14) +
+            theme(
+              plot.background = element_rect(fill = "white", color = NA),
+              panel.background = element_rect(fill = "white", color = NA)
+            ))
+
+w <- 8
+h <- 6
+dpi <- 300
+```
+
+# Executive Summary
+
+**Business Task.** Analyze public Fitbit tracker data to find usage trends and translate them into marketing opportunities for Bellabeat products.  
+
+**Key Findings.**
+- Steps and calories are strongly related; most high-calorie days pair with moderate–high steps and ~6–9 hours of sleep.
+- Light activity dominates time budgets; very-active minutes are scarce.
+- Weekends and weekdays have similar odds of hitting 10k steps; weekends show wider spread in sleep hours.
+- Hourly patterns peak mid-day and early evening.
+
+**Recommendations.**
+- Run a cross-week 10k Steps Challenge with streak badges and conversion tracking.
+- Trigger gentle-day routines when sleep < 7 hours (lighter goals, reminders).
+- Promote intensity-mix micro-goals (e.g., 2×10 minutes fairly active + 40 minutes lightly active).
+
+---
+
+# Ask
+
+- What trends exist in smart device usage?  
+- How do those trends apply to Bellabeat customers?  
+- How can they influence Bellabeat’s marketing strategy?
+
+---
+
+# Prepare
+
+**Data.** Fitbit Fitness Tracker Dataset (Mobius/Kaggle, CC0).  
+**Periods.** 3.12.16–4.11.16 and 4.12.16–5.12.16.  
+**Notes.** Small convenience sample; missingness and non-wear present.
+
+```{r libraries}
+library(tidyverse)
+library(lubridate)
+library(fs)
+library(janitor)
+library(ggplot2)
+library(scales)
+library(viridis)
+```
+
+```{r paths-and-read}
+folder1 <- "data/mturkfitbit_export_3.12.16-4.11.16/Fitabase_Data_3.12.16-4.11.16"
+folder2 <- "data/mturkfitbit_export_4.12.16-5.12.16/Fitabase_Data_4.12.16-5.12.16"
+
+file_paths1 <- fs::dir_ls(folder1, glob = "*.csv")
+file_paths2 <- fs::dir_ls(folder2, glob = "*.csv")
+
+file_contents_1 <- setNames(lapply(file_paths1, readr::read_csv, show_col_types = FALSE), basename(file_paths1))
+file_contents_2 <- setNames(lapply(file_paths2, readr::read_csv, show_col_types = FALSE), basename(file_paths2))
+
+all_files <- union(names(file_contents_1), names(file_contents_2))
+data <- lapply(all_files, function(fname) {
+  file1 <- file_contents_1[[fname]]
+  file2 <- file_contents_2[[fname]]
+  if (!is.null(file1) && !is.null(file2)) bind_rows(file1, file2) else if (!is.null(file1)) file1 else file2
+})
+names(data) <- all_files
+```
+
+---
+
+# Process
+
+```{r standardize}
+daily_activity <- data[["dailyActivity_merged.csv"]] %>%
+  janitor::clean_names() %>%
+  mutate(
+    activity_date = as.Date(activity_date, format = "%m/%d/%Y"),
+    weekday = wday(activity_date, label = TRUE, abbr = FALSE, week_start = 1),
+    total_active_minutes = very_active_minutes + fairly_active_minutes + lightly_active_minutes
+  ) %>%
+  distinct()
+
+sleep_data <- data[["sleepDay_merged.csv"]] %>%
+  janitor::clean_names() %>%
+  mutate(sleep_day = as.Date(sleep_day, format = "%m/%d/%Y")) %>%
+  distinct(id, sleep_day, .keep_all = TRUE)
+
+activity_sleep <- daily_activity %>%
+  left_join(sleep_data, by = c("id", "activity_date" = "sleep_day"))
+```
+
+```{r remove-outliers}
+daily_activity <- daily_activity %>%
+  filter(!(total_steps == 0 & calories > 2500))
+activity_sleep <- activity_sleep %>%
+  filter(!(total_steps == 0 & calories > 2500))
+```
+
+---
+
+# Analyze
+
+## KPI Snapshot
+
+```{r kpi-table}
+kpis <- activity_sleep %>%
+  mutate(
+    total_hours_asleep = total_minutes_asleep / 60,
+    total_active_hours = total_active_minutes / 60
+  ) %>%
+  summarise(
+    avg_steps = mean(total_steps, na.rm = TRUE),
+    median_steps = median(total_steps, na.rm = TRUE),
+    avg_active_hours = mean(total_active_hours, na.rm = TRUE),
+    avg_calories = mean(calories, na.rm = TRUE),
+    avg_sleep_hours = mean(total_hours_asleep, na.rm = TRUE),
+    sleep_efficiency = mean(total_minutes_asleep / total_time_in_bed, na.rm = TRUE)
+  )
+kpis
+```
+
+**Notes.** Typical day shows moderate steps, ~6–8 hours sleep; calories track steps plus basal burn.
+
+## Average Steps by Weekday
+
+```{r avg-steps-weekday}
+avg_steps_weekday <- daily_activity %>%
+  group_by(weekday) %>%
+  summarise(avg_steps = mean(total_steps, na.rm = TRUE)) %>%
+  ungroup()
+
+p1 <- ggplot(avg_steps_weekday, aes(x = weekday, y = avg_steps, fill = weekday)) +
+  geom_col(show.legend = FALSE) +
+  labs(title = "Average Steps by Weekday", x = "Weekday", y = "Average Steps")
+
+ggsave("plots/01_avg_steps_weekday.png", plot = p1, width = w, height = h, dpi = dpi)
+p1
+```
+
+... (repeat similar ggsave calls for all plots) ...

@@ -3,22 +3,35 @@ title: "Bellabeat Case Study - Fitbit Data Analysis"
 author: "Tim Foltz"
 date: "2025-08-11"
 output:
-  pdf_document:
-    toc: true
-    toc_depth: 3
-    number_sections: false
-    latex_engine: xelatex
   html_document:
     toc: true
     toc_depth: 3
     toc_float: true
     number_sections: false
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    number_sections: false
+    latex_engine: xelatex
 geometry: margin=1in
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
-knitr::opts_chunk$set(fig.width = 8, fig.height = 6, dpi = 300)
+knitr::opts_chunk$set(fig.width = 8, fig.height = 6, dpi = 300, dev = "png", dev.args = list(bg = "white"), fig.bg = "white")
+
+library("ggplot2")
+theme_set(theme_minimal(base_size = 14) +
+            theme(
+              plot.background = element_rect(fill = "white", color = NA),
+              panel.background = element_rect(fill = "white", color = NA)
+            ))
+```
+
+```{r plot-dir, include=FALSE}
+# Ensure a plots directory exists and set common export sizes
+if (!dir.exists("plots")) dir.create("plots")
+w <- 8; h <- 6; dpi <- 300
 ```
 
 # Executive Summary
@@ -144,10 +157,13 @@ avg_steps_weekday <- daily_activity %>%
   summarise(avg_steps = mean(total_steps, na.rm = TRUE)) %>%
   ungroup()
 
-ggplot(avg_steps_weekday, aes(x = weekday, y = avg_steps, fill = weekday)) +
+p01 <- ggplot(avg_steps_weekday, aes(x = weekday, y = avg_steps, fill = weekday)) +
   geom_col(show.legend = FALSE) +
   labs(title = "Average Steps by Weekday", x = "Weekday", y = "Average Steps") +
   theme_minimal()
+
+print(p01)
+ggsave("plots/01_avg_steps_weekday.png", plot = p01, width = w, height = h, dpi = dpi, bg = "white")
 ```
 
 **Notes.** Steps are steady across the week; slight midweek lift suggests routine-driven activity.
@@ -158,11 +174,14 @@ ggplot(avg_steps_weekday, aes(x = weekday, y = avg_steps, fill = weekday)) +
 steps_cal_cor <- cor(daily_activity$total_steps, daily_activity$calories, use = "complete.obs")
 steps_cal_cor
 
-ggplot(daily_activity, aes(x = total_steps, y = calories)) +
+p02 <- ggplot(daily_activity, aes(x = total_steps, y = calories)) +
   geom_point(alpha = 0.45) +
   geom_smooth(method = "lm", se = FALSE) +
   labs(title = "Steps vs Calories Burned", x = "Total Steps", y = "Calories Burned") +
   theme_minimal()
+
+print(p02)
+ggsave("plots/02_steps_vs_calories.png", plot = p02, width = w, height = h, dpi = dpi, bg = "white")
 ```
 
 **Notes.** Clear positive relationship; removing non-wear anomalies tightens the trend.
@@ -181,13 +200,16 @@ y_max <- max(activity_sleep2$total_hours_asleep, na.rm = TRUE)
 y_lim <- ceiling(y_max * 2) / 2
 x_max <- quantile(activity_sleep2$total_steps, 0.99, na.rm = TRUE)
 
-ggplot(activity_sleep2, aes(x = total_steps, y = total_hours_asleep)) +
+p03 <- ggplot(activity_sleep2, aes(x = total_steps, y = total_hours_asleep)) +
   stat_summary_2d(aes(z = calories), fun = mean, bins = 30) +
   scale_fill_viridis(name = "Mean Calories", option = "C") +
   coord_cartesian(xlim = c(0, x_max)) +
   scale_y_continuous(breaks = seq(0, y_lim, 0.5)) +
   labs(title = "Steps vs Sleep Hours (color = mean calories)", x = "Total Steps", y = "Total Hours Asleep") +
   theme_minimal()
+
+print(p03)
+ggsave("plots/03_steps_sleep_heatmap.png", plot = p03, width = w, height = h, dpi = dpi, bg = "white")
 ```
 
 **Notes.** High calories concentrate with moderate–high steps and ~6–9 hours of sleep; very short sleep correlates with lower calories at similar steps.
@@ -195,7 +217,7 @@ ggplot(activity_sleep2, aes(x = total_steps, y = total_hours_asleep)) +
 ## Steps × Sleep Hours by Weekend/Weekday (Heatmap)
 
 ```{r sleep-steps-calories-heatmap-facet}
-ggplot(activity_sleep2, aes(x = total_steps, y = total_hours_asleep)) +
+p04 <- ggplot(activity_sleep2, aes(x = total_steps, y = total_hours_asleep)) +
   stat_summary_2d(aes(z = calories), fun = mean, bins = 30) +
   scale_fill_viridis(name = "Mean Calories", option = "C") +
   coord_cartesian(xlim = c(0, x_max)) +
@@ -203,6 +225,9 @@ ggplot(activity_sleep2, aes(x = total_steps, y = total_hours_asleep)) +
   facet_wrap(~ is_weekend) +
   labs(title = "Steps vs Sleep Hours by Weekend/Weekday", x = "Total Steps", y = "Total Hours Asleep") +
   theme_minimal()
+
+print(p04)
+ggsave("plots/04_steps_sleep_heatmap_weekend.png", plot = p04, width = w, height = h, dpi = dpi, bg = "white")
 ```
 
 **Notes.** Weekend sleep is more variable; weekday patterns are tighter around workday schedules.
@@ -222,11 +247,14 @@ intensity_long <- daily_activity %>%
 y_max <- max(intensity_long$hours, na.rm = TRUE)
 y_lim <- ceiling(y_max * 2) / 2
 
-ggplot(intensity_long, aes(x = weekday, y = hours, fill = intensity)) +
+p05 <- ggplot(intensity_long, aes(x = weekday, y = hours, fill = intensity)) +
   geom_col() +
   scale_y_continuous(breaks = seq(0, y_lim, 0.5)) +
   labs(title = "Active Hours by Weekday and Intensity", x = "Weekday", y = "Hours") +
   theme_minimal()
+
+print(p05)
+ggsave("plots/05_active_hours_intensity.png", plot = p05, width = w, height = h, dpi = dpi, bg = "white")
 ```
 
 **Notes.** Light activity dominates; scope for micro-bursts of higher intensity without increasing total time burden.
@@ -244,19 +272,27 @@ daily_activity <- daily_activity %>%
 pct_10k <- daily_activity %>%
   group_by(is_weekend) %>%
   summarise(pct = mean(hit_10k, na.rm = TRUE))
+```
 
-ggplot(pct_10k, aes(x = is_weekend, y = pct, fill = is_weekend)) +
+```{r pct-days-10k-plot}
+p06 <- ggplot(pct_10k, aes(x = is_weekend, y = pct, fill = is_weekend)) +
   geom_col(show.legend = FALSE) +
   scale_y_continuous(labels = scales::percent) +
   labs(title = "Share of Days with ≥10,000 Steps", x = "", y = "Percent of Days") +
   theme_minimal()
+
+print(p06)
+ggsave("plots/06_pct_days_10k.png", plot = p06, width = w, height = h, dpi = dpi, bg = "white")
 ```
 
 ```{r ecdf-steps-weekend}
-ggplot(daily_activity, aes(x = total_steps, color = is_weekend)) +
+p07 <- ggplot(daily_activity, aes(x = total_steps, color = is_weekend)) +
   stat_ecdf(size = 1) +
   labs(title = "Cumulative Distribution of Daily Steps", x = "Total Steps", y = "Cumulative Proportion", color = "") +
   theme_minimal()
+
+print(p07)
+ggsave("plots/07_ecdf_steps_weekend.png", plot = p07, width = w, height = h, dpi = dpi, bg = "white")
 ```
 
 **Notes.** Read proportions at 10k to quantify weekend vs weekday goal attainment.
@@ -286,6 +322,7 @@ if (show_heatmap) {
     theme_minimal()
 
   print(p08)
+  ggsave("plots/08_hourly_steps_heatmap.png", plot = p08, width = w, height = h, dpi = dpi, bg = "white")
 } else {
   message("hourlySteps_merged.csv not found in data; skipping heatmap.")
 }
