@@ -3,22 +3,22 @@ title: "Bellabeat Case Study - Fitbit Data Analysis"
 author: "Tim Foltz"
 date: "2025-08-11"
 output:
-  pdf_document:
-    toc: true
-    toc_depth: 3
-    number_sections: false
-    latex_engine: xelatex
   html_document:
     toc: true
     toc_depth: 3
     toc_float: true
     number_sections: false
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    number_sections: false
+    latex_engine: xelatex
 geometry: margin=1in
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
-knitr::opts_chunk$set(fig.width = 8, fig.height = 6, dpi = 300)
+knitr::opts_chunk$set(fig.width = 8, fig.height = 6, dpi = 300, dev = "png", dev.args = list(bg = "white"), fig.bg = "white")
 
 library("ggplot2")
 theme_set(theme_minimal(base_size = 14) +
@@ -26,10 +26,12 @@ theme_set(theme_minimal(base_size = 14) +
               plot.background = element_rect(fill = "white", color = NA),
               panel.background = element_rect(fill = "white", color = NA)
             ))
+```
 
-w <- 8
-h <- 6
-dpi <- 300
+```{r plot-dir, include=FALSE}
+# Ensure a plots directory exists and set common export sizes
+if (!dir.exists("plots")) dir.create("plots")
+w <- 8; h <- 6; dpi <- 300
 ```
 
 # Executive Summary
@@ -155,12 +157,298 @@ avg_steps_weekday <- daily_activity %>%
   summarise(avg_steps = mean(total_steps, na.rm = TRUE)) %>%
   ungroup()
 
-p1 <- ggplot(avg_steps_weekday, aes(x = weekday, y = avg_steps, fill = weekday)) +
+p01 <- ggplot(avg_steps_weekday, aes(x = weekday, y = avg_steps, fill = weekday)) +
   geom_col(show.legend = FALSE) +
-  labs(title = "Average Steps by Weekday", x = "Weekday", y = "Average Steps")
+  labs(title = "Average Steps by Weekday", x = "Weekday", y = "Average Steps") +
+  theme_minimal()
 
-ggsave("plots/01_avg_steps_weekday.png", plot = p1, width = w, height = h, dpi = dpi)
-p1
+print(p01)
+ggsave("plots/01_plot.png", plot = p01, width = w, height = h, dpi = dpi, bg = "white")
+ggsave("plots/01_avg_steps_weekday.png", plot = p01, width = w, height = h, dpi = dpi, bg = "white")
 ```
 
-... (repeat similar ggsave calls for all plots) ...
+**Notes.** Steps are steady across the week; slight midweek lift suggests routine-driven activity.
+
+## Steps vs Calories (Outliers Removed)
+
+```{r steps-vs-calories}
+steps_cal_cor <- cor(daily_activity$total_steps, daily_activity$calories, use = "complete.obs")
+steps_cal_cor
+
+p02 <- ggplot(daily_activity, aes(x = total_steps, y = calories)) +
+  geom_point(alpha = 0.45) +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(title = "Steps vs Calories Burned", x = "Total Steps", y = "Calories Burned") +
+  theme_minimal()
+
+print(p02)
+ggsave("plots/02_plot.png", plot = p02, width = w, height = h, dpi = dpi, bg = "white")
+ggsave("plots/02_steps_vs_calories.png", plot = p02, width = w, height = h, dpi = dpi, bg = "white")
+```
+
+**Notes.** Clear positive relationship; removing non-wear anomalies tightens the trend.
+
+## Steps × Sleep Hours → Mean Calories (Heatmap)
+
+```{r sleep-steps-calories-heatmap}
+activity_sleep2 <- activity_sleep %>%
+  mutate(
+    total_hours_asleep = total_minutes_asleep / 60,
+    is_weekend = factor(if_else(weekday %in% c("Saturday","Sunday"), "Weekend", "Weekday"),
+                        levels = c("Weekday","Weekend"))
+  )
+
+y_max <- max(activity_sleep2$total_hours_asleep, na.rm = TRUE)
+y_lim <- ceiling(y_max * 2) / 2
+x_max <- quantile(activity_sleep2$total_steps, 0.99, na.rm = TRUE)
+
+p03 <- ggplot(activity_sleep2, aes(x = total_steps, y = total_hours_asleep)) +
+  stat_summary_2d(aes(z = calories), fun = mean, bins = 30) +
+  scale_fill_viridis(name = "Mean Calories", option = "C") +
+  coord_cartesian(xlim = c(0, x_max)) +
+  scale_y_continuous(breaks = seq(0, y_lim, 0.5)) +
+  labs(title = "Steps vs Sleep Hours (color = mean calories)", x = "Total Steps", y = "Total Hours Asleep") +
+  theme_minimal()
+
+print(p03)
+ggsave("plots/03_plot.png", plot = p03, width = w, height = h, dpi = dpi, bg = "white")
+ggsave("plots/03_steps_sleep_heatmap.png", plot = p03, width = w, height = h, dpi = dpi, bg = "white")
+```
+
+**Notes.** High calories concentrate with moderate–high steps and ~6–9 hours of sleep; very short sleep correlates with lower calories at similar steps.
+
+## Steps × Sleep Hours by Weekend/Weekday (Heatmap)
+
+```{r sleep-steps-calories-heatmap-facet}
+p04 <- ggplot(activity_sleep2, aes(x = total_steps, y = total_hours_asleep)) +
+  stat_summary_2d(aes(z = calories), fun = mean, bins = 30) +
+  scale_fill_viridis(name = "Mean Calories", option = "C") +
+  coord_cartesian(xlim = c(0, x_max)) +
+  scale_y_continuous(breaks = seq(0, y_lim, 0.5)) +
+  facet_wrap(~ is_weekend) +
+  labs(title = "Steps vs Sleep Hours by Weekend/Weekday", x = "Total Steps", y = "Total Hours Asleep") +
+  theme_minimal()
+
+print(p04)
+ggsave("plots/04_plot.png", plot = p04, width = w, height = h, dpi = dpi, bg = "white")
+ggsave("plots/04_steps_sleep_heatmap_weekend.png", plot = p04, width = w, height = h, dpi = dpi, bg = "white")
+```
+
+**Notes.** Weekend sleep is more variable; weekday patterns are tighter around workday schedules.
+
+## Active Hours by Weekday and Intensity
+
+```{r intensity-mix}
+intensity_long <- daily_activity %>%
+  select(weekday, very_active_minutes, fairly_active_minutes, lightly_active_minutes) %>%
+  pivot_longer(
+    cols = c(very_active_minutes, fairly_active_minutes, lightly_active_minutes),
+    names_to = "intensity",
+    values_to = "minutes"
+  ) %>%
+  mutate(hours = minutes / 60)
+
+y_max <- max(intensity_long$hours, na.rm = TRUE)
+y_lim <- ceiling(y_max * 2) / 2
+
+p05 <- ggplot(intensity_long, aes(x = weekday, y = hours, fill = intensity)) +
+  geom_col() +
+  scale_y_continuous(breaks = seq(0, y_lim, 0.5)) +
+  labs(title = "Active Hours by Weekday and Intensity", x = "Weekday", y = "Hours") +
+  theme_minimal()
+
+print(p05)
+ggsave("plots/05_plot.png", plot = p05, width = w, height = h, dpi = dpi, bg = "white")
+ggsave("plots/05_active_hours_intensity.png", plot = p05, width = w, height = h, dpi = dpi, bg = "white")
+```
+
+**Notes.** Light activity dominates; scope for micro-bursts of higher intensity without increasing total time burden.
+
+## Weekend vs Weekday (Goal & Distribution)
+
+```{r percent-meeting-10k}
+daily_activity <- daily_activity %>%
+  mutate(
+    is_weekend = factor(if_else(weekday %in% c("Saturday","Sunday"), "Weekend", "Weekday"),
+                        levels = c("Weekday","Weekend")),
+    hit_10k = total_steps >= 10000
+  )
+
+pct_10k <- daily_activity %>%
+  group_by(is_weekend) %>%
+  summarise(pct = mean(hit_10k, na.rm = TRUE))
+```
+
+```{r pct-days-10k-plot}
+p06 <- ggplot(pct_10k, aes(x = is_weekend, y = pct, fill = is_weekend)) +
+  geom_col(show.legend = FALSE) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(title = "Share of Days with ≥10,000 Steps", x = "", y = "Percent of Days") +
+  theme_minimal()
+
+print(p06)
+ggsave("plots/06_plot.png", plot = p06, width = w, height = h, dpi = dpi, bg = "white")
+ggsave("plots/06_pct_days_10k.png", plot = p06, width = w, height = h, dpi = dpi, bg = "white")
+```
+
+```{r ecdf-steps-weekend}
+p07 <- ggplot(daily_activity, aes(x = total_steps, color = is_weekend)) +
+  stat_ecdf(size = 1) +
+  labs(title = "Cumulative Distribution of Daily Steps", x = "Total Steps", y = "Cumulative Proportion", color = "") +
+  theme_minimal()
+
+print(p07)
+ggsave("plots/07_plot.png", plot = p07, width = w, height = h, dpi = dpi, bg = "white")
+ggsave("plots/07_ecdf_steps_weekend.png", plot = p07, width = w, height = h, dpi = dpi, bg = "white")
+```
+
+**Notes.** Read proportions at 10k to quantify weekend vs weekday goal attainment.
+
+## Hourly Steps Heatmap
+
+```{r hourly-heatmap}
+show_heatmap <- "hourlySteps_merged.csv" %in% names(data)
+
+if (show_heatmap) {
+  hourly_steps <- data[["hourlySteps_merged.csv"]] %>%
+    janitor::clean_names() %>%
+    mutate(
+      activity_hour = mdy_hms(activity_hour),
+      date = as.Date(activity_hour),
+      hour = lubridate::hour(activity_hour),
+      weekday = wday(date, label = TRUE, abbr = FALSE, week_start = 1)
+    )
+
+  heat <- hourly_steps %>%
+    group_by(weekday, hour) %>%
+    summarise(steps = mean(step_total, na.rm = TRUE), .groups = "drop")
+
+  p08 <- ggplot(heat, aes(x = hour, y = weekday, fill = steps)) +
+    geom_tile() +
+    labs(title = "Average Hourly Steps by Weekday", x = "Hour of Day", y = "Weekday", fill = "Avg Steps") +
+    theme_minimal()
+
+  print(p08)
+ggsave("plots/08_plot.png", plot = p08, width = w, height = h, dpi = dpi, bg = "white")
+  ggsave("plots/08_hourly_steps_heatmap.png", plot = p08, width = w, height = h, dpi = dpi, bg = "white")
+} else {
+  message("hourlySteps_merged.csv not found in data; skipping heatmap.")
+}
+```
+
+**Notes**
+- Step activity peaks during **morning (7–9 AM)** and **early evening (5–8 PM)** on most weekdays.
+- Weekends show a more diffuse pattern with weaker morning peaks.
+- Timing nudges around these windows should maximize engagement.
+
+---
+
+# Share (Slide Deck Outline)
+
+1. **Title Slide** — *Bellabeat Case Study – Fitbit Data Analysis*  
+   Tim Foltz – August 2025  
+
+2. **Business Task**  
+   - Analyze Fitbit usage trends to understand consumer habits  
+   - Apply insights to Bellabeat products to improve marketing strategies  
+   - Deliver actionable recommendations based on data findings  
+
+3. **Data Sources**  
+   - Fitbit Fitness Tracker Dataset (CC0 Public Domain)  
+   - ~30 participants with activity, sleep, and steps data  
+   - Two periods: March–May 2016  
+   - Some gaps in sleep and heart rate tracking  
+
+4. **Methodology**  
+   - Data cleaning, standardization, and merging across date ranges  
+   - Derived helper columns (weekend/weekday, total active hours)  
+   - Filtered outliers (e.g., calories > 2500 with 0 steps)  
+   - Explored patterns in activity, sleep, and calories  
+
+5. **Plot 1 – Average Steps by Weekday**  
+   - Most steps midweek; Monday/Sunday lowest  
+   - Suggests potential for weekend activity campaigns  
+
+6. **Plot 2 – Steps vs Calories Burned**  
+   - Clear positive relationship  
+   - Calories > 0 at ~0 steps suggests logged workouts without Fitbit movement data  
+
+7. **Plot 3 – Sleep Hours vs Steps (Color/Size by Calories)**  
+   - High calories with moderate–high steps and ~6–9 hours sleep  
+   - Very short sleep correlates with lower calories at similar steps  
+
+8. **Plot 4 – Weekend vs Weekday % ≥10k Steps**  
+   - Weekdays higher very-active minutes; weekends more lightly active minutes  
+
+9. **Plot 5 – Active Hours Intensity**  
+   - Light activity dominates; scope for short bursts of higher intensity without extra time  
+
+10. **Plot 6 – Percent of Days with ≥10k Steps**  
+    - ~30% of days meet goal; no major weekday/weekend difference  
+    - Longer weekend sleep may reduce active hours  
+
+11. **Plot 7 – Distribution of Daily Steps**  
+    - ECDF shows similar weekend/weekday goal attainment proportions  
+
+12. **Plot 8 – Hourly Steps Heatmap**  
+    - Moderate steps, 6–8 hours sleep, calories aligned with activity and basal burn  
+    - Sleep efficiency stable; opportunity to raise fairly-active time  
+
+13. **Key Findings**  
+    - Weekends lower average steps  
+    - Steps strongly correlate with calories  
+    - More sleep modestly linked to higher next-day activity  
+    - Activity peaks midday with evening bump  
+
+14. **Recommendations**  
+    - Weekend step challenges  
+    - Sleep coaching for <7h sleepers  
+    - Mixed-intensity badge rewards  
+    - Hydration/activity nudges at peak hours  
+
+15. **Act – Next Steps**  
+    - KPIs: +10% weekend steps, +5% active hours  
+    - A/B test push notification timing  
+    - Segment by sleep/activity patterns for tailored messaging  
+    - Gather seasonal, demographic, and campaign-overlap data  
+
+---
+
+
+# Act (Recommendations & Next Steps)
+
+**Recommendations.**
+- **10k Steps Challenge (all week).** Badges for streaks; spotlight top movers.  
+- **Sleep-Aware Coaching.** When sleep < 7h, suggest lighter goals and timed walk reminders.  
+- **Intensity Mix.** Promote 2×10 min fairly-active + 40 min lightly-active as a daily target.
+
+**Success Metrics.**
+- Challenge participation rate; % days ≥10k; average steps delta vs baseline.  
+- Days with sleep <7h that still meet a scaled goal.  
+- Increase in fairly-active minutes without reducing total hours.
+
+**Experiment Plan.**
+- A/B push timing (morning vs afternoon nudges).  
+- Targeting by prior-week sleep pattern.  
+- Content variants (badge vs streak messaging).
+
+**Data to Collect Next.**
+- Longer time horizon (seasonality).  
+- Demographics and segments.  
+- Device wear-time to flag non-wear days.  
+- Campaign impression & click logs to tie to behavior change.
+
+---
+
+# Limitations
+
+Convenience sample (2016), potential non-wear and logging gaps, short window limits causal inference.
+
+---
+
+# Reproducibility
+
+```{r session-info}
+set.seed(42)
+sessionInfo()
+```
