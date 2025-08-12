@@ -53,9 +53,9 @@ Analysis of public **Fitbit tracker data** to uncover trends in **steps, sleep, 
 ---
 
 ## 📈 Visualization Preview
-> Steps × Sleep (color = mean calories)
-<p>
-  <img src="images/03_steps_sleep_heatmap.png" alt="Steps vs Sleep (Mean Calories)" width="760" style="background-color: white;>
+> Steps × Sleep (color = mean calories)  
+<p align="center">
+  <img src="images/03_steps_sleep_heatmap.png" alt="Steps vs Sleep (Mean Calories)" width="760" style="background-color: white;">
 </p>
 <sub>Peak calorie burn appears with ~6–9 hours of sleep and 8k–12k steps.</sub>
 
@@ -64,5 +64,15 @@ Analysis of public **Fitbit tracker data** to uncover trends in **steps, sleep, 
 ## 🛠 How to Run Locally
 
 ```bash
+# 1. Clone this repository
 git clone https://github.com/YOUR-USERNAME/bellabeat-fitbit-case-study.git
 cd bellabeat-fitbit-case-study
+
+# 2. (Optional) Create a fresh R environment
+# install.packages("renv"); renv::init()
+
+# 3. Install required packages
+install.packages(c("tidyverse", "lubridate", "fs", "janitor", "ggplot2", "scales", "viridis"))
+
+# 4. Knit the R Markdown to HTML/PDF
+rmarkdown::render("Bellabeat_Case_Study.Rmd")
