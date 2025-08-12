@@ -55,7 +55,7 @@ Analysis of public **Fitbit tracker data** to uncover trends in **steps, sleep, 
 ## 📈 Visualization Preview
 > Steps × Sleep (color = mean calories)  
 <p align="center">
-  <img src="images/03_steps_sleep_heatmap.png" alt="Steps vs Sleep (Mean Calories)" width="760" style="background-color: white;">
+  <img src="images/03_plot.png" alt="Steps vs Sleep (Mean Calories)" width="760" style="background-color: white;">
 </p>
 <sub>Peak calorie burn appears with ~6–9 hours of sleep and 8k–12k steps.</sub>
 
