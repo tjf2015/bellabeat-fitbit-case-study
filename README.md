@@ -4,7 +4,7 @@ Brand accents: Purple #6E44FF  |  Orange #FF7A00
 -->
 
 <p align="center">
-  <img src="images/03_steps_sleep_heatmap.png" alt="Steps × Sleep Heatmap" width="860" style="background-color: white;">
+  <img src="images/03_plot" alt="Steps × Sleep Heatmap" width="860" >
 </p>
 
 <h1 align="center">Bellabeat Case Study — Fitbit Data Analysis</h1>
