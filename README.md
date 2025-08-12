@@ -62,7 +62,6 @@ Analysis of public **Fitbit tracker data** to uncover trends in **steps, sleep, 
 ---
 
 ## 🛠 How to Run Locally
-You already have `Bellabeat_Case_Study.Rmd` and the knitted outputs here. To re-run:
 
 ```bash
 git clone https://github.com/YOUR-USERNAME/bellabeat-fitbit-case-study.git
